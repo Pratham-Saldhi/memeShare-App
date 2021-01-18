@@ -1,0 +1,98 @@
+package com.example.memeshare;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.Intent;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class MainActivity extends AppCompatActivity {
+    ImageView memeImage;
+    ProgressBar progressBar;
+    String currentImageUrl = null;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        memeImage = (ImageView) findViewById(R.id.memeShareImage);
+        progressBar = findViewById(R.id.pbCircle);
+        loadMeme();
+    }
+    private void loadMeme(){
+        // Instantiate the RequestQueue.
+        progressBar.setVisibility(View.VISIBLE);
+        String url = "https://meme-api.herokuapp.com/gimme";
+
+        // Request a json object response from the provided URL.
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url,null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) { // if no errors occurs
+                        try {
+                            currentImageUrl = response.getString("url");
+                            Glide.with(MainActivity.this).load(currentImageUrl).listener(new RequestListener<Drawable>() {
+                                @Override
+                                public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                                    progressBar.setVisibility(View.GONE);
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                                    progressBar.setVisibility(View.GONE);
+                                    return false;
+                                }
+                            }).into(memeImage);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) { // if some error occurs
+            }
+        });
+
+    // Add the request to the RequestQueue.
+    MySingleton.getInstance(MainActivity.this).addToRequestQueue(jsonObjectRequest);
+    }
+    public void shareMeme(View view) throws ClassNotFoundException {
+        // AN intent to send it to different platform
+
+        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+        intent.setType("text/plain");
+
+        // Putting an extra text with the intent
+        intent.putExtra(Intent.EXTRA_TEXT, "hey!!, checkout this cool meme from reddit at " + currentImageUrl);
+
+        // Creating a CHOOSER
+        Intent chooser = Intent.createChooser(intent, "Share this meme using..");
+        startActivity(chooser);
+
+    }
+
+    public void nextMeme(View view) {
+        loadMeme();
+    }
+}
